@@ -1,0 +1,5 @@
+// Windows application icon resource.
+// IDI_ICON1 (the lowest-numbered ICON resource) is what Windows uses for the
+// .exe icon in Explorer / the taskbar, and what Qt uses as the default window
+// icon. The path is relative to this .rc file.
+IDI_ICON1 ICON "nexora.ico"
