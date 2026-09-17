@@ -34,8 +34,14 @@ std::chrono::system_clock::time_point Flight::parseDateTime(const std::string& d
 
 std::string Flight::timePointToString(const std::chrono::system_clock::time_point& tp) {
 	auto time = std::chrono::system_clock::to_time_t(tp);
-	std::tm tm_info;
+	std::tm tm_info{};
+#ifdef _WIN32
 	localtime_s(&tm_info, &time);
+#else
+	if (const std::tm* local = std::localtime(&time)) {
+		tm_info = *local;
+	}
+#endif
 	char buffer[20];
 	std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M", &tm_info);
 	return std::string(buffer);

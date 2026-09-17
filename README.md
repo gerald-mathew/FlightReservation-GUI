@@ -48,7 +48,7 @@ Nexora Airways is a full-featured airline booking application with a glass-style
 | Persistence | SQLite 3 (embedded, statically linked) |
 | Security | Argon2id password hashing |
 | Payments | Paystack REST API over Qt Network |
-| Build | CMake 3.21+, MinGW 13.1 toolchain |
+| Build | CMake 3.21+; MinGW on Windows, system Qt + SQLite3/Argon2 on Linux/macOS |
 
 ## Project structure
 
@@ -64,16 +64,33 @@ icons/         Application icons and Windows resource
 
 ## Building
 
-**Prerequisites:** Qt 6.5+ (MinGW 13.1 kit), CMake 3.21+ and a C++20 compiler.
+**Prerequisites:** Qt 6.5+ (with the Quick/QML modules), CMake 3.21+ and a C++20 compiler.
+
+| Platform | Qt and dependencies |
+| --- | --- |
+| Windows | Qt 6.11 MinGW kit (default paths in the `mingw` preset) |
+| Linux | `sudo apt install qt6-base-dev qt6-declarative-dev libsqlite3-dev libargon2-dev pkg-config ninja-build` |
+| macOS | `brew install qt sqlite argon2 ninja` |
+
+### Windows (MinGW)
 
 ```bash
-cmake -B build -S . --preset <your-preset>
-cmake --build build
+cmake --preset mingw
+cmake --build --preset mingw
 ```
 
-The build statically links the MinGW runtime and runs `windeployqt` automatically, producing a self-contained folder that runs on a clean Windows machine. Runtime data (database, payment config, icons) is copied next to the executable as part of the build.
+The Windows build statically links the MinGW runtime and runs `windeployqt` automatically, producing a self-contained folder that runs on a clean Windows machine. Runtime data (database, payment config, icons) is copied next to the executable as part of the build.
 
-> **Note:** Argon2 and SQLite3 are compiled from source under `third_party/` using the same **MinGW-Builds 13.1.0 (MSVCRT)** toolchain as Qt. Mixing other prebuilt archives causes a startup load failure. Rebuild the archives with `third_party/build_thirdparty.sh` if needed.
+> **Note:** On Windows, Argon2 and SQLite3 are compiled from source under `third_party/` using the same **MinGW-Builds 13.1.0 (MSVCRT)** toolchain as Qt. Mixing other prebuilt archives causes a startup load failure. Rebuild the archives with `third_party/build_thirdparty.sh` if needed.
+
+### Linux / macOS
+
+```bash
+cmake --preset linux
+cmake --build --preset linux
+```
+
+The executable is written to `build/linux/bin/NexoraAirways` (the `bin/` subdirectory avoids clashing with the same-named QML module directory). On these platforms the build links the **system** SQLite3 and Argon2 packages instead of the Windows archives, and the Windows-only pieces (`.rc` icon resource, `windeployqt`, static MinGW runtime flags) are skipped. The runtime icon deployment still works from `icons/nexora.ico`.
 
 ## Configuration
 

@@ -7,6 +7,11 @@
             "displayName": "Qt 6.11 MinGW (Debug)",
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_PREFIX_PATH": "C:/Qt/6.11.1/mingw_64",
@@ -14,9 +19,25 @@
                 "CMAKE_CXX_COMPILER": "C:/Qt/Tools/mingw1310_64/bin/g++.exe",
                 "MSYS2_PREFIX": "C:/msys64/ucrt64"
             }
+        },
+        {
+            "name": "linux",
+            "displayName": "Linux/macOS (system Qt 6.5+)",
+            "description": "Uses the Qt6, sqlite3 and argon2 packages installed by the system package manager.",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/linux",
+            "condition": {
+                "type": "notEquals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
         }
     ],
     "buildPresets": [
-        { "name": "mingw", "configurePreset": "mingw" }
+        { "name": "mingw", "configurePreset": "mingw" },
+        { "name": "linux", "configurePreset": "linux" }
     ]
 }
