@@ -9,6 +9,20 @@
 #include <cstdint>
 #include <string>
 
+namespace {
+	// Compares two equally sized strings without leaking how far they match.
+	bool constantTimeEquals(const std::string& left, const std::string& right) {
+		if (left.size() != right.size()) {
+			return false;
+		}
+		unsigned char difference = 0;
+		for (size_t i = 0; i < left.size(); ++i) {
+			difference |= static_cast<unsigned char>(left[i]) ^ static_cast<unsigned char>(right[i]);
+		}
+		return difference == 0;
+	}
+}
+
 std::string Crypto::generateSalt() {
 	static std::random_device rd;
 	static std::mt19937 gen(rd());
@@ -107,7 +121,7 @@ bool Crypto::verifyPassword(const std::string& password, const std::string& stor
 		std::string computed_hash = ss.str();
 
 		// Constant-time comparison to prevent timing attacks
-		return computed_hash == storedHash;
+		return constantTimeEquals(computed_hash, storedHash);
 	}
 	catch (const std::exception&) {
 		return false;

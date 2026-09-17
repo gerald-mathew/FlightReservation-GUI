@@ -1,0 +1,35 @@
+# Build output
+build/
+build-*/
+CMakeFiles/
+CMakeCache.txt
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+
+# Qt Creator / IDE user files
+.qtcreator/
+.vscode/
+.idea/
+*.user
+*.user.*
+
+# Third-party intermediate objects (the .a archives stay committed for the
+# documented CMake build; rebuild the objects with third_party/build_thirdparty.sh)
+third_party/obj/
+
+# Runtime data
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Local secrets and configuration (copy the matching *.example.txt files)
+config/*.txt
+!config/*.example.txt
+
+# OS cruft
+.DS_Store
+Thumbs.db
