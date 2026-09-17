@@ -30,18 +30,39 @@ add_library(reservation_core STATIC
     core/users.cpp
 )
 
+# Link argon2 and sqlite3.
+#
+# On Windows the app is built with Qt's MinGW kit, so link the static archives
+# built from source with that SAME toolchain (third_party/build_thirdparty.sh).
+# Mixing in the MSYS2 UCRT archives makes the app fail to load with
+# STATUS_ENTRYPOINT_NOT_FOUND (0xC0000139) before main(). On Linux/macOS use
+# the system packages discovered by CMake/pkg-config.
 target_include_directories(reservation_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/core
-    ${THIRD_PARTY}/include
 )
 
-# Link argon2 and sqlite3 as STATIC archives. These are pure C libraries built
-# from source with Qt's MinGW 13.1 kit (see third_party/build_thirdparty.sh),
-# so they embed cleanly into the MSVCRT binary with no runtime-DLL conflict.
-target_link_libraries(reservation_core PUBLIC
-    ${THIRD_PARTY}/lib/libsqlite3.a
-    ${THIRD_PARTY}/lib/libargon2.a
-)
+if(WIN32)
+    target_include_directories(reservation_core PUBLIC ${THIRD_PARTY}/include)
+    target_link_libraries(reservation_core PUBLIC
+        ${THIRD_PARTY}/lib/libsqlite3.a
+        ${THIRD_PARTY}/lib/libargon2.a
+    )
+else()
+    find_package(PkgConfig QUIET)
+    find_package(SQLite3 REQUIRED)
+    target_link_libraries(reservation_core PUBLIC SQLite::SQLite3)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(ARGON2 IMPORTED_TARGET libargon2)
+    endif()
+    if(TARGET PkgConfig::ARGON2)
+        target_link_libraries(reservation_core PUBLIC PkgConfig::ARGON2)
+    else()
+        find_path(ARGON2_INCLUDE_DIR argon2.h REQUIRED)
+        find_library(ARGON2_LIBRARY argon2 REQUIRED)
+        target_include_directories(reservation_core PUBLIC ${ARGON2_INCLUDE_DIR})
+        target_link_libraries(reservation_core PUBLIC ${ARGON2_LIBRARY})
+    endif()
+endif()
 
 # ---- GUI application ----
 qt_add_executable(NexoraAirways
@@ -64,9 +85,13 @@ qt_add_executable(NexoraAirways
 # icon for the first time.)
 set(NEXORA_ICON "${CMAKE_CURRENT_SOURCE_DIR}/icons/nexora.ico")
 if(EXISTS "${NEXORA_ICON}")
-    enable_language(RC)
-    target_sources(NexoraAirways PRIVATE icons/nexora.rc)
     set(NEXORA_HAS_ICON TRUE)
+    # The compiled .rc resource (Explorer/taskbar icon) is Windows-only; the
+    # runtime window icon is set from the deployed .ico on every platform.
+    if(WIN32)
+        enable_language(RC)
+        target_sources(NexoraAirways PRIVATE icons/nexora.rc)
+    endif()
 endif()
 
 # Theme.qml is a singleton — must be marked before qt_add_qml_module
@@ -104,28 +129,50 @@ target_include_directories(NexoraAirways PRIVATE
 
 target_link_libraries(NexoraAirways PRIVATE Qt6::Quick Qt6::Gui Qt6::Network reservation_core)
 
+# On platforms where executables have no suffix (Linux/macOS) the target name
+# would collide with the QML module output directory of the same name, which
+# qt_add_qml_module creates under the build root. Put the executable in a bin/
+# subdirectory there; Windows keeps its existing location.
+if(NOT WIN32)
+    set_target_properties(NexoraAirways PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    )
+endif()
+
 # Statically link the MinGW C/C++ runtime so the exe does NOT depend on
 # libgcc_s_seh-1.dll, libstdc++-6.dll or libwinpthread-1.dll. The Qt6 DLLs
 # still need to be deployed alongside the exe (see windeployqt POST_BUILD
-# below) because only a dynamic Qt build is installed.
-target_link_options(NexoraAirways PRIVATE
-    -static-libgcc
-    -static-libstdc++
-    -static
-)
+# below) because only a dynamic Qt build is installed. These flags belong to
+# MinGW and must not be passed to MSVC or the Linux/macOS toolchains.
+if(MINGW)
+    target_link_options(NexoraAirways PRIVATE
+        -static-libgcc
+        -static-libstdc++
+        -static
+    )
+endif()
 
-# Copy runtime data (database) next to the executable
+# Copy runtime data (database) and the Paystack secret next to the executable
+# when they exist. They are not committed (the database is created on first
+# run), so the copies are optional and must not break a fresh checkout.
 add_custom_command(TARGET NexoraAirways POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:NexoraAirways>/data
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${CMAKE_CURRENT_SOURCE_DIR}/data/flight_reservation.db
-            $<TARGET_FILE_DIR:NexoraAirways>/data/flight_reservation.db
-    # Copy the Paystack secret config next to the executable
     COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:NexoraAirways>/config
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${CMAKE_CURRENT_SOURCE_DIR}/config/paystack_secret.txt
-            $<TARGET_FILE_DIR:NexoraAirways>/config/paystack_secret.txt
 )
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/data/flight_reservation.db")
+    add_custom_command(TARGET NexoraAirways POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${CMAKE_CURRENT_SOURCE_DIR}/data/flight_reservation.db
+                $<TARGET_FILE_DIR:NexoraAirways>/data/flight_reservation.db
+    )
+endif()
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/config/paystack_secret.txt")
+    add_custom_command(TARGET NexoraAirways POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${CMAKE_CURRENT_SOURCE_DIR}/config/paystack_secret.txt
+                $<TARGET_FILE_DIR:NexoraAirways>/config/paystack_secret.txt
+    )
+endif()
 
 # Deploy the app icon next to the executable so main.cpp can set the window icon.
 if(NEXORA_HAS_ICON)
