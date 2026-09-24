@@ -116,4 +116,4 @@ Released under the [MIT License](LICENSE). Vendored third-party libraries retain
 - [SQLite](https://www.sqlite.org/) (public domain)
 - [nlohmann/json](https://github.com/nlohmann/json) (MIT)
 
-<p align="center"><sub>Built and maintained by <a href="https://github.com/Gerald-Mathew">Gerald-Mathew</a></sub></p>
+<p align="center"><sub>Built and maintained by <a href="https://github.com/gerald-mathew">Gerald-Mathew</a></sub></p>
