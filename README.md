@@ -5,6 +5,10 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/gerald-mathew/FlightReservation-GUI/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/gerald-mathew/FlightReservation-GUI/actions/workflows/ci.yml/badge.svg"></a>
+</p>
+
+<p align="center">
   <strong>A desktop flight-reservation system with a fluid QML interface and a strongly-typed C++20 reservation engine.</strong>
 </p>
 
